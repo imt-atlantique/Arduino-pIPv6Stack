@@ -7,10 +7,10 @@ If you are using our Arduino µIPv6 stack, you're probably wondering why we crea
 Because Arduino UNO has to be IPv6 ready too ! With this stack, you'll be able to join a 6LoWPAN network using
 Arduinos UNO (which only have 2kB of RAM).
 
-With pIPv6 stack, we reduced RPL and CoAP implementation (to keep an ultra small memory footprint).
+With pIPv6 stack, we reduced RPL and CoAP functionnalities to keep an ultra small memory footprint.
 
 
-![Arduino pIPv6 Stack]()
+![Arduino pIPv6 Stack](http://departements.telecom-bretagne.eu/data/rsm/pIPv6%20stack%20diagram.png)
 
 
 Features
