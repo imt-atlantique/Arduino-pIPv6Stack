@@ -1,13 +1,15 @@
-Arduino-pIPv6Stack
-==================
+Arduino pico IPv6 stack
+=======================
 
 A very light IPv6 stack for [Arduinos](http://www.arduino.cc/) UNO and [Xbee](http://www.digi.com/en/products/wireless/point-multipoint/xbee-series1-module) 
 based on [Contiki OS](http://www.contiki-os.org/) network stack.
-If you are using our Arduino µIPv6 stack, you're probably wondering why we created a lighter stack ?
+
+If you are using our [Arduino IPv6 stack](https://github.com/telecombretagne/Arduino-IPv6Stack/), you're
+probably wondering why we created a lighter stack ?
 Because Arduino UNO has to be IPv6 ready too ! With this stack, you'll be able to join a 6LoWPAN network using
 Arduinos UNO (which only have 2kB of RAM).
-
-With pIPv6 stack, we reduced RPL and CoAP functionnalities to keep an ultra small memory footprint.
+With pIPv6 stack, we reduced RPL and CoAP functionnalities to keep an ultra small memory footprint ( **pIPv6** acronym
+stands for " **p**ico **I**nternet **P**rotocol **v**ersion **6**").
 
 
 ![Arduino pIPv6 Stack](http://departements.telecom-bretagne.eu/data/rsm/pIPv6%20stack%20diagram.png)
@@ -16,8 +18,7 @@ With pIPv6 stack, we reduced RPL and CoAP functionnalities to keep an ultra smal
 Features
 --------
 
-
-* IP network stack with low-power standards : [6LoWPAN](http://datatracker.ietf.org/wg/6lowpan/charter/), [RPL](http://tools.ietf.org/html/rfc6550), and [CoAP](http://datatracker.ietf.org/doc/draft-ietf-core-coap/)
+* IP network stack with low-power standards : [6LoWPAN](http://datatracker.ietf.org/wg/6lowpan/charter/), reduced [RPL](http://tools.ietf.org/html/rfc6550), and [CoAP](http://datatracker.ietf.org/doc/draft-ietf-core-coap/)
 * Compatible with all [Arduino](http://arduino.cc/en/Main/Products) boards 
 * Based on [Contiki OS](http://www.contiki-os.org/) network stack
 * Can be used on top of [IEEE 802.15.4](http://www.digi.com/products/wireless-wired-embedded-solutions/zigbee-rf-modules/point-multipoint-rfmodules/xbee-series1-module), IEEE 802.3 (Ethernet), IEEE 802.11 (Wifi) MAC layers *
@@ -37,3 +38,12 @@ License
 -------
  
 This stack is open source software : it can be freely used both in commercial and non-commercial systems and the full source code is available.
+
+
+People
+-------
+[Renzo Navas](renzo.navas@telecom-bretagne.eu) (Télecom Bretagne, RSM dpt) : project maintainer
+
+[Baptiste Gaultier](baptiste.gaultier@telecom-bretagne.eu) (Télecom Bretagne, RSM dpt) : documentation
+
+[Laurent Toutain](Laurent.Toutain@telecom-bretagne.eu) (Télecom Bretagne, RSM dpt) : associate professor and project lead
