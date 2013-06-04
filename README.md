@@ -4,7 +4,7 @@ Arduino pico IPv6 stack
 A very light IPv6 stack for [Arduinos](http://www.arduino.cc/) UNO and [Xbee](http://www.digi.com/en/products/wireless/point-multipoint/xbee-series1-module) 
 based on [Contiki OS](http://www.contiki-os.org/) network stack.
 
-If you are using our [Arduino IPv6 stack](https://github.com/telecombretagne/Arduino-IPv6Stack/), you're
+If you are using our [Arduino µIPv6 stack](https://github.com/telecombretagne/Arduino-IPv6Stack/), you're
 probably wondering why we created a lighter stack ?
 Because Arduino UNO has to be IPv6 ready too ! With this stack, you'll be able to join a 6LoWPAN network using
 Arduinos UNO (which only have 2kB of RAM).
@@ -42,8 +42,8 @@ This stack is open source software : it can be freely used both in commercial an
 
 People
 -------
-[Renzo Navas](renzo.navas@telecom-bretagne.eu) (Télecom Bretagne, RSM dpt) : project maintainer
+[Renzo Navas](renzo.navas@telecom-bretagne.eu) (Télecom Bretagne, RSM dpt) : *project maintainer*
 
-[Baptiste Gaultier](baptiste.gaultier@telecom-bretagne.eu) (Télecom Bretagne, RSM dpt) : documentation
+[Baptiste Gaultier](baptiste.gaultier@telecom-bretagne.eu) (Télecom Bretagne, RSM dpt) : *documentation*
 
-[Laurent Toutain](Laurent.Toutain@telecom-bretagne.eu) (Télecom Bretagne, RSM dpt) : associate professor and project lead
+[Laurent Toutain](Laurent.Toutain@telecom-bretagne.eu) (Télecom Bretagne, RSM dpt) : *associate professor and project lead*
