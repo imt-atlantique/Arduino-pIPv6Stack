@@ -1,0 +1,63 @@
+##### ADD
+# /sbin/ifconfig <interface> inet6 add <ipv6address>/<prefixlength>
+# /sbin/ifconfig eth0 inet6 add 2001:0db8:0:f101::1/64
+
+##### DEL
+# /sbin/ifconfig <interface> inet6 del <ipv6address>/<prefixlength>
+# /sbin/ifconfig eth0 inet6 del 2001:0db8:0:f101::1/64
+
+sudo ifconfig eth0 inet6 add aaaa::1/64
+
+######## ROUTE SHOW
+#Mac view route tables
+netstat -rn
+netstat -r
+route -n get -inet6 default # DEFAULT GW
+route -n get aaaa::2
+
+#Linux http://www.tldp.org/HOWTO/html_single/Linux+IPv6-HOWTO/
+ip -6 route show [dev <device>]
+route -A inet6
+
+######## ROUTE ADD
+####MAC OSX
+##http://ipv6int.net/systems/mac_os_x-ipv6.html
+##sudo route add -inet6 default -interface en0
+sudo route add -inet6 default aaaa::2 # http://www.tunnelbroker.net/forums/index.php?topic=2292.0   # http://apple.stackexchange.com/questions/33097/how-to-change-the-default-gateway-of-a-mac-osx-machine
+sudo route add -inet6 aaaa::/64 -interface en0
+sudo route add -inet6 aaaa::/64 aaaa::2
+
+####LINUX
+route -A inet6 add <ipv6network>/<prefixlength> dev <device>
+route -A inet6 add aaaa::1 dev eth0 
+
+##http://ipv6exchange.net/questions/66/how-can-i-add-and-delete-ipv6-routes-on-macos-x
+##sudo route add -inet6 -mtu 1400 default 2001:0DB8:deed::1
+
+########### SHOW NEIGHBOURS
+
+ip -6 neigh show
+
+8.2. Manipulating neighbors table using “ip”
+8.2.1. Manually add an entry 
+With following command you are able to manually add an entry
+# ip -6 neigh add <IPv6 address> lladdr <link-layer address> dev <device>
+Example:
+# ip -6 neigh add fec0::1 lladdr 02:01:02:03:04:05 dev eth0
+
+8.2.2. Manually delete an entry
+Like adding also an entry can be deleted:
+
+# ip -6 neigh del <IPv6 address> lladdr <link-layer address> dev <device>
+Example:
+# ip -6 neigh del fec0::1 lladdr 02:01:02:03:04:05 dev eth0
+
+-------
+
+#NetCat
+#Listen
+nc -6 -u -v -l 8765
+
+#Talk
+nc -6 -u -v aaaa::213:a200:95d0:2fbd 8765
+nc -6 -u -v aaaa::2 8765

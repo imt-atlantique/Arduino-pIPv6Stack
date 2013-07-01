@@ -1,0 +1,56 @@
+#######################################
+# Syntax Coloring Map For picoIPv6
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+PicoIPv6Connection	KEYWORD1
+XBeeMACLayer	KEYWORD1
+MACLayer	KEYWORD1
+MACTransmissionStatus	KEYWORD1
+CoAPEngine	KEYWORD1
+u8_t	KEYWORD1
+struct	KEYWORD1
+timer	KEYWORD1
+uip_ipaddr_t	KEYWORD1
+uint16_t	KEYWORD1
+uint8_t	KEYWORD1
+u16_t	KEYWORD1
+
+
+
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+init	KEYWORD2
+send	KEYWORD2
+receive	KEYWORD2
+getMacAddress	KEYWORD2
+connect	KEYWORD2
+setPicoIPv6Connection	KEYWORD2
+isConnected	KEYWORD2
+sendCoAPpacket	KEYWORD2
+timer_restart	KEYWORD2
+timer_set	KEYWORD2
+timer_expired	KEYWORD2
+udp_input_callback	KEYWORD2
+strlen	KEYWORD2
+sprintf	KEYWORD2
+getLastReceivedPacketType	KEYWORD2
+getLastSenderIPAddress	KEYWORD2
+getLastSenderUDPSourcePort	KEYWORD2
+getUdpData	KEYWORD2
+udp_send	KEYWORD2
+
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+UIP_BUFSIZE	LITERAL1
+DATA_SEND_PERIOD	LITERAL1
+UDP_SEND_TIME	LITERAL1
+UIP_UDP_PAYLOAD_MAX_BUFSIZE	LITERAL1

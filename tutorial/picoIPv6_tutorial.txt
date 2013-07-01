@@ -1,0 +1,235 @@
+HOW TO RUN PICO IPv6 (SUPPRESS RA) EXAMPLE:
+-------------------------------
+
+* NEEDED:
+	- Linux machine (for NAT66 router)
+	- Host machine (for receiving and sending UDP messages). Could be a machine using netcat.
+	- Tmote Sky (to run contiki's rpl-border-router example code)
+	- Arduino UNO + Shield + XBee module (for answering the received messages)
+	- Connection to an ipv6 outside network (In this case Ethernet manual configured IPv6 Network, network prefix: bbbb::/64 .Old Case: the wireless RSM-B25 network, prefix: 2001:660:7301:51 /64)
+	- A delegated prefix configured for that network -for usin on the sensor network-
+				(This Case: manually configured to be aaaa::/64 is configured to be managed by the linux machine with the bbbb::xxxx:xxxx:xxxx:xxxx/64 address configured with the NAT66
+				OLD USECASE: the 2001:660:7301:57 /64 prefix is configured to be managed by the linux machine with the 2001:660:7301:51:ae39:dffff:fefa:ada3 /64 address, configured with the NAT66)
+
+* INSTRUCTIONS:
+
+1) Download the code located in https://svn.telecom-bretagne.eu/repository/arduino-development // replace by picoIPv6
+
+2) Apply the following configuration to your XBee module:
+
+CH - CHANNEL = 0xE
+
+ID - PAN ID = 0xABCD
+
+DH - Destination Address High = 0x0
+
+DL - Destination Address Low = 0xFFFF
+
+MY - 16-bit Source Address = 0xFFFF
+
+AP - API Enable = 0x2
+
+MM - MacMode = 2
+
+Usage XBEE Conf Mode:
+Console (screen, CoolTerm realterm)connect to Ardiono with XBEE with empty sketch
+press +++ WITHOUT pressing ENTER, and Wait for "OK"
+Then enter each command+value and press ENTER
+Eg. ATCHE (sets channel E, E == 14)
+Then for write all configurations send command ATWR
+ATWR +  ENTER
+
+
+3) Copy the nat66_linux_deployment.tar.gz code to the linux machine. It is located in the picoIPv6/tutorial folder. Decompress it in that machine.
+
+4) In the nat66.c file, change the value of the delegated prefix that is going to be used (this case aaaa::) on the sensor/INTERNAL/6LoWPAN network:
+
+    /* Computation of the src addr - ::/64 prefix must be replaced by cccc::/64 prefix*/ 
+    ip6h->ip6_src.s6_addr[0]=0x20; 
+    ip6h->ip6_src.s6_addr[1]=0x01; 
+    ip6h->ip6_src.s6_addr[2]=0x06; 
+    ip6h->ip6_src.s6_addr[3]=0x60; 
+    ip6h->ip6_src.s6_addr[4]=0x73; 
+    ip6h->ip6_src.s6_addr[5]=0x01; 
+    ip6h->ip6_src.s6_addr[6]=0x00; 
+    ip6h->ip6_src.s6_addr[7]=0x57;
+
+to
+
+    /* Computation of the src addr - ::/64 prefix must be replaced by cccc::/64 prefix*/ 
+    ip6h->ip6_src.s6_addr[0]=0xaa; 
+    ip6h->ip6_src.s6_addr[1]=0xaa; 
+    ip6h->ip6_src.s6_addr[2]=0x00; 
+    ip6h->ip6_src.s6_addr[3]=0x00; 
+    ip6h->ip6_src.s6_addr[4]=0x00; 
+    ip6h->ip6_src.s6_addr[5]=0x00; 
+    ip6h->ip6_src.s6_addr[6]=0x00; 
+    ip6h->ip6_src.s6_addr[7]=0x00;
+
+5) In the launch.sh file, change the following line by specifying the delegated prefix again:
+
+	# ROUTE CONFIGURATION FOR NATING FROM OUTSIDE TO SENSOR NETWORK
+	# Add a route for packets that goes to sensor network in order to nat them thanks to tunnel tun_otos - Only cccc::/64 packets must be natted
+	ip -6 route add 2001:660:7301:57::/64 dev tun_otos
+
+to 
+
+	# ROUTE CONFIGURATION FOR NATING FROM OUTSIDE TO SENSOR NETWORK
+	# Add a route for packets that goes to sensor network in order to nat them thanks to tunnel tun_otos - Only cccc::/64 packets must be natted
+	ip -6 route add aaaa::/64 dev tun_otos   # generic case: ip -6 route add ****:****:****:****::/64 dev tun_otos
+
+6) In the contiki code, do the following changes:
+
+	- In the uipopt.h file, add the following line at the end (this will add the use of an ACK to the DAO messages sent):
+
+			#define RPL_CONF_DAO_ACK 1
+
+	- In the ~/contiki/platform/sky/contiki-conf.h file, make sure that the RF channel is 14 and do the specified change (this will disable the ContikiMAC specific protocol, not necessarily available for all 802.15.4 devices):
+	
+		#define RF_CHANNEL	14
+
+		CHANGE 
+
+			#ifndef NETSTACK_CONF_RDC
+			#define NETSTACK_CONF_RDC     contikimac_driver
+			#endif /* NETSTACK_CONF_RDC */
+
+		TO
+
+			#ifndef NETSTACK_CONF_RDC
+			#define NETSTACK_CONF_RDC     nullrdc_driver//contikimac_driver
+			#endif /* NETSTACK_CONF_RDC */
+
+	- Go to the ~/contiki/examples/ipv6:rpl-border-router.c file and change the following:
+
+		static uip_ipaddr_t prefix;
+
+		to
+
+		//This is the delegated prefix
+		static uip_ipaddr_t prefix = {0xaa, 0xaa, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0, 0, 0, 0, 0, 0, 0, 0}; //static uip_ipaddr_t prefix = {0x20, 0x01, 0x6, 0x60, 0x73, 0x01, 0x00, 0x57, 0, 0, 0, 0, 0, 0, 0, 0};
+
+	AND
+
+	  	PRINTF("RPL-Border router started\n");
+
+ 		/* Request prefix until it has been received */
+  		while(!prefix_set) {
+    		  etimer_set(&et, CLOCK_SECOND);
+    		  request_prefix();
+    		  PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+  		}
+
+		to
+
+	  	PRINTF("RPL-Border router started\n");
+
+		//This line is added to specify our delegated the prefix
+		set_prefix_64(&prefix);
+
+ 		/* Request prefix until it has been received */
+  		while(!prefix_set) {
+    		  etimer_set(&et, CLOCK_SECOND);
+    		  request_prefix();
+    		  PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+  		}
+
+7) Load the contiki rpl-border-router example in a Tmote Sky:
+
+$ make TARGET=sky MOTES=/dev/ttyUSB0 border-router.upload
+
+NOTE: normally it will be /dev/ttyUSB* where the value may change according to the number of devices connected
+NOTE2: can also check the sky motes connected with command $ sudo make TARGET=sky sky-motelist
+
+8) Go to ~/contiki/tools and compile the tunslip6 tool:
+
+$ cc -o tunslip6 tunslip6.c
+
+9) Copy the tunslip6 executable to the linux machine which will run the NAT66
+
+10) Connect the linux machine (NAT66 router) to the ipv6 network where the delegated prefix is configured (RSM-B25 in this case)
+
+11) Connect the Tmote Sky with the uploaded rpl-border-router code to the linux machine with the NAT66 and run the tunslip6 application:
+$ sudo ./tunslip6 -v -t tap0 aaaa::212:7400:115e:c49b
+($ sudo ./tunslip6 -v -t tap0 2001:660:7301:57:0012:7400:10cf:c311 )
+
+NOTE: the IP address entered should be the one of the Tmote Sky device. The first 8 bytes correspond to the prefix aaaa:0000:0000:0000. The other 8 bytes correspond to the EUI-64 deriverd of the MAC address  0212:7400:115e:c49b. Change these values in terms of the prefix and the device used.
+NOTE2: to effectively obtain the IP Address of the Tmote Sky we can do a $ sudo make TARGET=sky login MOTES=/dev/ttyUSB*
+		to the mote and resent; and the complete IP address will be printed on the terminal
+
+12) Run the launch.sh script in order to configure the NAT66 router in the linux machine:
+
+$ sudo ./launch.sh
+
+12b) Also to manually configure the ethernet IPv6 network run $ sudo ./ipv6OutsideNetConfig.sh or manually
+ifconfig eth0 inet6 add bbbb::2/64 # Linux machine will have IP bbbb::2/64 over eth0 interface
+route -A inet6 add bbbb::1/128 dev eth0  # We add a direct troute to the Host Machine that will have IP bbbb::1 over the ethernet link.
+
+
+13) Connect the Arduino UNO + Shield + XBee module to a computer where the arduino IDE is installed and load the pico IPv6 (suppressRA) code to it (Once loaded, open the Serial Monitor if you want to see some debugging)
+Several library use examples can be found on the examples folder. Add the picoIPv6 as a custom arduino library (copy to Arduino/libraries); and then run the examples on arduino IDE by opening  file-->Examples-->PicoIPv6-->FooExample
+
+14) Connect a Host machine by Ethernet to the linux machine running the NAT66. And configure IP address and Route of the outsiede network (IP bbbb::1/64 gateway the NAT66 linux machine with ip bbbb::2)
+Eg: On a MACOSX Host machine, use Network tool , choose "Configure IPv6 Manually" set IPv6 Address to bbbb::1 , Prefix Length to 64 and Roter/gateway as the IP address of the linux machine: bbbb::2
+
+15) On the host machine Use a terminal to listen to received UDP messages using netcat in the 8765 port (The port used on the UDP examples):
+$ nc -6 -u -l -v 8765
+
+16) Open another terminal in order to send messages to the device
+
+$ nc -6 -u -v aaaa::213:a200:95D0:2fbd 8765 )
+(nc -6 -u -v 2001:660:7301:57:13:a200:a6c1:2f57 8765)
+
+NOTE: The specified ip address is formed by the delegated prefix + XBee module's MAC address AFTER being modified by the NATT66 machine, will not be the same IID of the device INSIDE the sensor network.
+To find out the IID of the XBEE after the nat66, we can send UDP message from Arduino/XBee to destination bbbb::1 (already UDPSendPeriodic Example), and on the linux machine that is running nat66,
+you can sniff the eth0 interface  (or the tap0 interface) to see the IP source address of the UDP message 
+
+17) For UDPReceiveCallbackSendEchoInverted : Start writing messages (up to 50 bytes -TODO: Check for 112 bytes restriction-) in the last opened terminal. The messages will be answered backwards and can be visualized in the previously opened terminal that receives the packets.
+
+NOTE: It is likely that a message must be sent more that once to see the answer. This is due to UDP packet loss, communication failures between the NAT66 router and the contiki border router (USB serial communication) and communication between the contiki border router and the XBee module (normally bad UDP checksums)
+
+
+-----------------------
+COAP/Emoncms/RaspberryPi
+CoapSendPeriodic Example
+
+The HOST Machine will be replaced by a CoAP server host machine, in our case a RaspberryPI
+
+Set Up the Raspberry PI IPv6 address and gateway
+1) Need to login by SSH to the RaspberryPi,for a configuration with no router and link to link ethernet connection we need to find the Local Link IP Address
+of our RaspberryPI (in our case case fe80::ba27:ebff:fea6:b22f . Tutorial of how to find the LL IP of the raspberryPI? Wireshark over the link?), and specify the ethernet interfacte that is connected to it (MACOSX case is en0, linux should be eth0),
+then we login with user "pi":
+
+$ ssh pi@fe80::ba27:ebff:fea6:b22f%en0
+
+password is: Raspberry
+
+#IPv6 configuration
+sudo ifconfig eth0 inet6 add bbbb::3/64
+#route -A inet6 add bbbb::/64 dev eth0
+
+#Show routes and neighbours for debugging pourposes 
+route -A inet6
+ip -6 neigh show
+
+------
+EmonCMS with CoAP on RaspberryPi:
+
+
+# input.php
+$socket = stream_socket_server("udp://[::]:5683", $errno, $errstr, STREAM_SERVER_BIND);
+Implments coap server
+
+# Activate CoAP on emoncms
+cd /var/www/emoncms/Modules/coap/
+nohup php input.php > /dev/null &
+
+#Show ports to see if we are listening to udp 5683
+sudo netstat -lptu # --listen -tulpn -vaun 
+
+#Set proper Date for emoncsms to show time info
+sudo date -s "Tue Apr 16 10:28:10 CEST 2013"
+
+#... change emoncms write API to be short, and not use too much payload of CoAP packet
+
+#...
