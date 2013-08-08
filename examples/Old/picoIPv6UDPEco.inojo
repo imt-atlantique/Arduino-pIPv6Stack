@@ -1,0 +1,144 @@
+// Do not remove the include below
+#include "picoIPv6UDPEco.h"
+
+#include <XBee.h>
+#include "XBeeInitHelper.h"
+#include "picoIPv6Connection.h"
+
+
+#define DEBUG 0
+
+int mem(){
+  uint8_t * heapptr, * stackptr;
+  stackptr = (uint8_t *)malloc(4);
+  heapptr = stackptr;
+  free(stackptr);
+  stackptr = (uint8_t *)(SP);
+  return stackptr - heapptr;
+}
+
+/*-------------------------------------------------------------------------------------*/
+
+
+//************* XBee *************
+XBeeInitHelper xbeeHelper;
+
+//***** PicoIPv6 Connection *****
+PicoIPv6Connection* picoConnection;
+
+
+u8_t picoip_buffer[UIP_BUFSIZE];
+#define UDP_CLIENT_PORT 8765
+#define UDP_SEND_TIME 10000
+struct timer udp_msg_timer;
+
+void setup() {
+  Serial.begin(9600);
+  delay(1000);
+
+  /* 1) Initialization of the XBee Module */
+  if (!xbeeHelper.init()){
+    PRINTF("CANNOT INITIALIZE XBEE MODULE.. CANNOT CONTINUE");
+    while (1){};
+  }
+
+  /* 2) Initialization of the picoIPv6 Connection */
+  picoConnection = new PicoIPv6Connection(&(xbeeHelper.getXbee()), &(xbeeHelper.getMyMac()), picoip_buffer);
+
+  //Send one message to broadcast
+  //connection->udp_send(connection->getLinkLocalMcastIPAddress(), UDP_CLIENT_PORT, UDP_CLIENT_PORT, "HELLO", 5); // TODO: can sniff packet but not sure if arriver router
+
+  PRINTF("MEMORY RAM LEFT: ");
+  Serial.println(mem(), DEC);
+  delay(100);
+
+  // 3) Set up the timer for sending UDP Messages
+  timer_set(&udp_msg_timer, UDP_SEND_TIME);
+}
+
+
+char msg_buf[160];
+uint16_t udp_msg_length;
+static uint16_t msg_counter = 0;
+static uip_ipaddr_t remote_client_ipaddr = {0xaa, 0xaa, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01};
+
+
+void loop() {
+
+  Serial.println(mem());
+
+  if (picoConnection->isConnected()){
+    PRINTF("CONNECTED!");
+    delay(100);
+
+
+    if (timer_expired(&udp_msg_timer)){
+      PRINTF("UDP TIMER EXPIRED! SEND..");
+      Serial.println("SND");
+      ++msg_counter;
+      sprintf(msg_buf, "msg UDP MSG-COAP:%hu \n", msg_counter); // %hu h:short u:unsigned
+      picoConnection->udp_send(&remote_client_ipaddr, UDP_CLIENT_PORT, UDP_CLIENT_PORT, msg_buf, strlen(msg_buf));
+      timer_restart(&udp_msg_timer);
+    }else{
+      //PRINTF("UDP TIMER NOT EXPIRED.");
+    }
+
+
+    if (picoConnection->receive()){//We answer the message we have just reverted in the msg_buffer
+      PRINTF("RECEIVED!");
+      if (picoConnection->getLastReceivedPacketType() == UDP){
+        PRINTF("");
+        PRINTF("");
+        PRINTF("IT IS UDP MESSAGE!!");
+        picoConnection->udp_send(picoConnection->getLastSenderIPAddress(), UDP_CLIENT_PORT, UDP_CLIENT_PORT, msg_buf, udp_msg_length);
+        delay(100);
+        msg_buf[udp_msg_length] = 0; //in order to print it for debugging, we finish the string with a 0
+        PRINTF("");
+        PRINTF("MSG received: ");
+        PRINTF(msg_buf);
+        PRINTF("");
+        PRINTF("");
+      }
+    }
+      //delay(UDP_SEND_TIME);
+  }else{
+    picoConnection->connect();
+    delay(200);
+    if (picoConnection->isConnected()){//We have just connected for the first time or from a disconnection
+      //timer_restart(&udp_msg_timer);
+      //PRINTF("NEW UDP SENDING TIMER SET");
+      PRINTF("CONNECTED!");
+    }
+  }
+  delay(100);
+}
+
+
+/* This function is called when we receive UDP Data
+ * on function PicoIPv6State.udp_input() ,
+ * but is only used in ConnectedState subclass
+ * */
+void udp_input_callback(uint8_t* udp_data, uint16_t length){
+  uint8_t i;
+
+  PRINTF("");
+  PRINTF("");
+  PRINTF("DATA rcv: ");
+  for (i=0; i < length; ++i){
+    PRINTHEX((char)udp_data[i]);
+  }
+  PRINTF("");
+  PRINTF("");
+
+  for(i=0; i<length; ++i){
+    msg_buf[length-1-i] = (char) udp_data[i];
+  }
+
+  udp_msg_length = length;
+
+  Serial.println();
+  PRINTF("MEM LEFT: ");
+  Serial.println(mem());
+
+}
+

@@ -1,7 +1,8 @@
 #include "PicoIPv6StateConnectedState.h"
 
-PicoIPv6StateConnectedState::PicoIPv6StateConnectedState(MACLayer* mac, u8_t* buffer, uip_lladdr_t* own_ll_address, /*int timeout,*/ uip_lladdr_t* gateway_ll_address, uip_ip6addr_t* gateway_ip_address, void (* udp_input_callback)(uint8_t* udp_data, uint16_t length)):PicoIPv6State(mac, buffer, own_ll_address, gateway_ll_address, gateway_ip_address){
+PicoIPv6StateConnectedState::PicoIPv6StateConnectedState(MACLayer* mac, u8_t* buffer, uip_lladdr_t* own_ll_address, /*int timeout,*/ uip_lladdr_t* gateway_ll_address, uip_ip6addr_t* gateway_ip_address, void (* udp_input_callback)(uint8_t* udp_data, uint16_t length), uint8_t instance_id):PicoIPv6State(mac, buffer, own_ll_address, gateway_ll_address, gateway_ip_address){
         this->currentState = CONNECTED;
+        this->dodag_instance_id = instance_id;
         this->udp_input_callback = udp_input_callback;
 }
 

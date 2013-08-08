@@ -1,3 +1,6 @@
+// Do not remove the include below
+#include "UDPSendPeriodic.h"
+
 #include "XBeeMACLayer.h"
 #include "PicoIPv6Connection.h"
 

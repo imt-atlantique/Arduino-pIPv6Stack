@@ -190,7 +190,8 @@ enum ReceivedPacketType{
   DIO,
   DAO_ACK,
   UDP,
-  NOT_EXPECTED_OR_ERROR
+  NOT_EXPECTED_OR_ERROR,
+  NS
 };
 /*-----ENUMS END-----*/
 

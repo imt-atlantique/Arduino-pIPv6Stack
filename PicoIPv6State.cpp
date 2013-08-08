@@ -259,6 +259,7 @@
       uip_ds6_set_addr_iid(&own_ip_address, own_ll_address);
       sicslowpan_init(own_ll_address);
       dodag_instance_id = -1; //not yet initialized
+      lastReceived = NOT_EXPECTED_OR_ERROR;
 
     }
     
@@ -511,18 +512,28 @@
           }
       
           /* NUD CASE */
-          if(/*uip_ds6_addr_lookup(&UIP_IP_BUF->destipaddr) == addr*/uip_ipaddr_cmp(gateway_ip_address, &UIP_IP_BUF->destipaddr)) {
+          uip_create_linklocal_prefix(&this->own_ip_address);
+
+          if(uip_ipaddr_cmp(&own_ip_address, &UIP_IP_BUF->destipaddr)) {
+
+			uip_create_default_prefix(&this->own_ip_address); //Go back to our real address
             uip_ipaddr_copy(&UIP_IP_BUF->destipaddr, &UIP_IP_BUF->srcipaddr);
             uip_ipaddr_copy(&UIP_IP_BUF->srcipaddr, &UIP_ND6_NS_BUF->tgtipaddr);
             flags = UIP_ND6_NA_FLAG_SOLICITED | UIP_ND6_NA_FLAG_OVERRIDE;
             goto create_na;
+
           } else {
-      #if UIP_CONF_IPV6_CHECKS
-            PRINTF("NS received is bad");
-            goto discard;
-      #endif /* UIP_CONF_IPV6_CHECKS */
+
+			  	uip_create_default_prefix(&this->own_ip_address); //Go back to our real address
+				#if UIP_CONF_IPV6_CHECKS
+					PRINTF("NS received is bad");
+					goto discard;
+				#endif /* UIP_CONF_IPV6_CHECKS */
+
           }
-        } else {
+
+
+        }else {
           goto discard;
         }
       
@@ -553,6 +564,8 @@
         PRINTF("Sending NA");
         //READY TO SEND! WE SEND IT RIGHT NOW
         ip_send(&UIP_IP_BUF->destipaddr);
+        this->lastReceived = NS;
+
         return;
       
       discard:

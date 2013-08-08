@@ -1,0 +1,239 @@
+// Do not remove the include below
+#include "picoIPv6UDPReceive.h"
+
+#include <XBee.h>
+#include "picoIPv6Connection.h"
+
+
+#define DEBUG 0
+
+int mem(){
+  uint8_t * heapptr, * stackptr;
+  stackptr = (uint8_t *)malloc(4);
+  heapptr = stackptr;
+  free(stackptr);
+  stackptr = (uint8_t *)(SP);
+  return stackptr - heapptr;
+}
+
+u8_t buf[UIP_BUFSIZE];
+
+/*-------------------------------------------------------------------------------------*/
+
+//#define UDP_SEND_TIME 10000
+
+#define UDP_CLIENT_PORT 8765
+
+//static uip_ipaddr_t remote_client_ipaddr = {0x20, 0x01, 0x06, 0x60, 0x73, 0x01, 0x00, 0x51, 0x62, 0x33, 0x4b, 0xff, 0xfe, 0x15, 0xa6, 0x0f};/*{0xbb, 0xbb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01};*//*{0xAA, 0xAA, 0, 0, 0, 0, 0, 0, 0x02, 0x12, 0x74, 0x00, 0x13, 0xEA, 0x45, 0xD1};*/
+
+//static uip_lladdr_t my_mac = {0x00, 0x13, 0xA2, 0x00, 0x40, 0x7B, 0x2F, 0x57};
+
+
+// ****** XBee CODE
+XBee xbee;
+
+// serial high
+uint8_t shCmd[] = {'S','H'};
+// serial low
+uint8_t slCmd[] = {'S','L'};
+
+AtCommandRequest atRequest = AtCommandRequest(shCmd);
+AtCommandResponse atResponse = AtCommandResponse();
+
+uint8_t mac_position = 0;
+
+static uip_lladdr_t my_mac;
+
+#define AT_RESPONSE_MAX_ATTEMPTS 5
+#define AT_REQUEST_MAX_ATTEMPTS 20
+
+// ****** XBee CODE
+
+
+bool getResponseMAC(){
+          if (atResponse.getValueLength() == 4) {
+            for (int i = 0; i < atResponse.getValueLength(); i++) {
+              my_mac.addr[mac_position++] = atResponse.getValue()[i];
+            }
+            return true;
+          }
+          return false;
+}
+
+bool sendAtCommand() {
+  PRINTF("FUN sendAtCommand");
+  for(int i=0; i<AT_REQUEST_MAX_ATTEMPTS; ++i){
+    // send the command
+    xbee.send(atRequest);
+
+    //TEMPORARILY, we send the request and wait for the attempt several times until we got it. This is because we can receive other packets that will be placed in the same buffer and they must be ignored until getting our AT response
+    for(int i=0; i<AT_RESPONSE_MAX_ATTEMPTS; ++i){
+
+      // wait up to 3 seconds for the status response
+      if (xbee.readPacket(1000)) {
+        // got a response!
+
+        // should be an AT command response
+        if (xbee.getResponse().getApiId() == AT_COMMAND_RESPONSE) {
+          xbee.getResponse().getAtCommandResponse(atResponse);
+
+          if (atResponse.isOk()) {
+            if (atRequest.getCommand() == shCmd || atRequest.getCommand() == slCmd){
+              return getResponseMAC();
+            }
+          }
+          else {
+            PRINTF("Command return error code: ");
+            PRINTHEX(atResponse.getStatus());
+          }
+        } else {
+          PRINTF("Expected AT response but got ");
+          PRINTHEX(xbee.getResponse().getApiId());
+        }
+      } else {
+        // at command failed
+        if (xbee.getResponse().isError()) {
+          PRINTF("Error reading packet.  Error code: ");
+          PRINTHEX(xbee.getResponse().getErrorCode());
+        }
+        else {
+          PRINTF("No response from radio");
+        }
+      }
+    }
+  }
+  return false;
+}
+
+bool initializeXBee(){
+    PRINTF("[initializeXBee]");
+    xbee.begin(9600);
+    delay(5000); //wait for the XBEE to initialize
+    // get SH
+    if (!sendAtCommand())
+      return false;
+    // set command to SL
+    atRequest.setCommand(slCmd);
+    if (!sendAtCommand())
+      return false;
+
+    PRINTF("");
+    PRINTF("MAC ADDRESS: 0x");
+    for (int i=0; i<8; ++i){
+      PRINTHEX(my_mac.addr[i]);
+      PRINTF(" ");
+    }
+    PRINTF("");
+    return true;
+}
+
+PicoIPv6Connection* connection;
+
+//struct timer udp_msg_timer;
+struct timer udp_msg_timer;
+#define UDP_SEND_TIME 10000
+
+void setup() {
+  Serial.begin(9600);
+  delay(1000);
+
+  if (!initializeXBee()){
+    PRINTF("CANNOT INITIALIZE XBEE MODULE.. CANNOT CONTINUE");
+    while (1){};
+  }
+
+  connection = new PicoIPv6Connection(&xbee, &my_mac, buf);
+
+  //Send one message to broadcast
+  connection->udp_send(connection->getLinkLocalMcastIPAddress(), UDP_CLIENT_PORT, UDP_CLIENT_PORT, "HELLO", 5);
+
+  Serial.println();
+  Serial.println();
+  PRINTF("MEMORY RAM LEFT: ");
+  Serial.println(mem(), DEC);
+  Serial.println();
+  delay(100);
+
+  timer_set(&udp_msg_timer, UDP_SEND_TIME);
+}
+
+char msg_buf[160];
+
+uint16_t msg_length;
+
+void udp_input_callback(uint8_t* udp_data, uint16_t length){
+  uint8_t i;
+
+  PRINTF("");
+  PRINTF("");
+  PRINTF("DATA rcv: ");
+  for (i=0; i < length; ++i){
+    PRINTHEX((char)udp_data[i]);
+  }
+  PRINTF("");
+  PRINTF("");
+
+  for(i=0; i<length; ++i){
+    msg_buf[length-1-i] = (char) udp_data[i];
+  }
+
+  msg_length = length;
+
+  Serial.println();
+  PRINTF("MEM LEFT: ");
+  Serial.println(mem());
+
+}
+
+static uint16_t msg_counter = 0;
+static uip_ipaddr_t remote_client_ipaddr = {0xaa, 0xaa, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x12, 0x74, 0x00, 0x11, 0x5e, 0xc4, 0x9b};/*{0xbb, 0xbb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01};*//*{0xAA, 0xAA, 0, 0, 0, 0, 0, 0, 0x02, 0x12, 0x74, 0x00, 0x13, 0xEA, 0x45, 0xD1};*/
+
+
+void loop() {
+  if (connection->isConnected()){
+    PRINTF("CONNECTED!");
+    delay(100);
+
+/*
+    if (timer_expired(&udp_msg_timer)){
+      PRINTF("UDP TIMER EXPIRED! SEND..");
+      ++msg_counter;
+      sprintf(msg_buf, "msg UDP MSG", msg_counter);
+      connection->udp_send(&remote_client_ipaddr, UDP_CLIENT_PORT, UDP_CLIENT_PORT, msg_buf, strlen(msg_buf));
+      timer_restart(&udp_msg_timer);
+    }else{
+      //PRINTF("UDP TIMER NOT EXPIRED.");
+    }
+*/
+
+
+    if (connection->receive()){//We answer the message we have just reverted in the msg_buffer
+      PRINTF("RECEIVED!");
+      if (connection->getLastReceivedPacketType() == UDP){
+        PRINTF("");
+        PRINTF("");
+        PRINTF("IT IS UDP MESSAGE!!");
+        connection->udp_send(connection->getLastSenderIPAddress(), UDP_CLIENT_PORT, UDP_CLIENT_PORT, msg_buf, msg_length);
+        delay(100);
+        msg_buf[msg_length] = 0; //in order to print it for debugging, we finish the string with a 0
+        PRINTF("");
+        PRINTF("MSG received: ");
+        PRINTF(msg_buf);
+        PRINTF("");
+        PRINTF("");
+      }
+    }
+
+      //delay(UDP_SEND_TIME);
+  }else{
+    connection->connect();
+    delay(200);
+    if (connection->isConnected()){//We have just connected for the first time or from a disconnection
+      //timer_restart(&udp_msg_timer);
+      //PRINTF("NEW UDP SENDING TIMER SET");
+      PRINTF("CONNECTED!");
+    }
+  }
+  delay(100);
+}
+

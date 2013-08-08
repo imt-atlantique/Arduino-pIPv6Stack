@@ -1,3 +1,6 @@
+// Do not remove the include below
+#include "CoapSendPeriodic.h"
+
 #include "XBeeMACLayer.h"
 #include "PicoIPv6Connection.h"
 #include "CoAPEngine.h"

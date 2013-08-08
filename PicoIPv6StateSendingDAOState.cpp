@@ -55,14 +55,24 @@ PicoIPv6StateSendingDAOState::PicoIPv6StateSendingDAOState(MACLayer* mac, u8_t* 
 }
 
 bool PicoIPv6StateSendingDAOState::receive_DAO_ACK(){
-      if (receive_mac() == RECEIVED){ //GOT SOMETHING AT MAC LEVEL
+
+	if (receive_mac() == RECEIVED){ //GOT SOMETHING AT MAC LEVEL
         PRINTF("RECEIVED AT MAC LEVEL");
+
         if (receive_ipv6() != NOT_EXPECTED_OR_ERROR){ //IF WE RECEIVED SOMETHING THAT WE COULD EXPECT, SEE IF IT IS A DIO
           PRINTF("RECEIVED SOMETHING EXPECTED");
+
           if (lastReceived == DAO_ACK){
             PRINTF("RECEIVED DAO ACK!");
             return true;
-          }
+          }else{
+				if (this->lastReceived == NS){
+					//if we are expecting a DAO ACK but we receive an NS, this means that the GW is performing ND with us so we have just sent a NA as response.
+					//This means also that if the GW received the NA successfully, it will be able to respond our DAO with a DAO ACK this time, so send a new DAO!
+					dao_output(this->gateway_ip_address, RPL_DEFAULT_LIFETIME, this->dodag_instance_id);
+					return false; //Because we did not yet receive the DAO ACK
+				}
+			}
         }
       }
       return false;

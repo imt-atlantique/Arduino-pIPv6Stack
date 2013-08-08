@@ -124,8 +124,9 @@ class PicoIPv6Connection{
           
         case DAO_ACK_RECEIVED:
           //In this case, change the state for a CONNECTED STATE
+          instance_id = this->state->getInstanceId();
           delete(this->state);
-          this->state = new PicoIPv6StateConnectedState(mac, buffer, own_ll_address_ptr, /*0,*/ &gateway_ll_addr, &gateway_ip_addr, &udp_input_callback); //by now, we do not use timers when connected
+          this->state = new PicoIPv6StateConnectedState(mac, buffer, own_ll_address_ptr, /*0,*/ &gateway_ll_addr, &gateway_ip_addr, &udp_input_callback, instance_id); //by now, we do not use timers when connected
           break;
         
         case CONNECTED:

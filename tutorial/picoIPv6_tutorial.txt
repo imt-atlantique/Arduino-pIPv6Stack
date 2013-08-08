@@ -202,11 +202,11 @@ then we login with user "pi":
 
 $ ssh pi@fe80::ba27:ebff:fea6:b22f%en0
 
-password is: Raspberry
+password is: raspberry
 
 #IPv6 configuration
 sudo ifconfig eth0 inet6 add bbbb::3/64
-#route -A inet6 add bbbb::/64 dev eth0
+route -A inet6 add bbbb::/64 dev eth0
 
 #Show routes and neighbours for debugging pourposes 
 route -A inet6
